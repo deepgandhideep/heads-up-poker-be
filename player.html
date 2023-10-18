@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game State - Player</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Game State - Player</h1>
+
+    <input type="text" id="playerName" placeholder="Enter Name">
+    <button id="joinGame">Join Game</button>
+
+    <h3>Your Cards:</h3>
+    <pre id="playerCards"></pre>
+
+    <h3>Community Cards:</h3>
+    <pre id="communityCards"></pre>
+
+    <div id="actions" style="display: none;">
+        <pre id="gameState"></pre>
+        <button id="check">Check</button>
+        <input type="number" id="betAmount" placeholder="Bet Amount">
+        <button id="bet">Bet/Raise</button>
+        <button id="fold">Fold</button>
+        <button id="call">Call</button>
+    </div>
+
+    <script>
+        const socket = io.connect('http://localhost:3000');
+
+        socket.on('gameState', (data) => {
+            document.getElementById('gameState').textContent = JSON.stringify(data, null, 2);
+            if (data.players && data.players[socket.id]) {
+                document.getElementById('playerCards').textContent = JSON.stringify(data.players[socket.id].hand, null, 2);
+            }
+            if (data.board) {
+                document.getElementById('communityCards').textContent = JSON.stringify(data.board, null, 2);
+            }
+        });
+
+        document.getElementById('joinGame').addEventListener('click', () => {
+            let playerName = document.getElementById('playerName').value;
+            socket.emit('joinGame', playerName);
+            document.getElementById('actions').style.display = "block";
+        });
+
+        document.getElementById('check').addEventListener('click', () => {
+            socket.emit('playerAction', { action: 'check' });
+        });
+
+        document.getElementById('bet').addEventListener('click', () => {
+            let amount = document.getElementById('betAmount').value;
+            socket.emit('playerAction', { action: 'bet', amount: amount });
+        });
+
+        document.getElementById('fold').addEventListener('click', () => {
+            socket.emit('playerAction', { action: 'fold' });
+        });
+
+        document.getElementById('call').addEventListener('click', () => {
+            socket.emit('playerAction', { action: 'call' });
+        });
+    </script>
+</body>
+</html>
