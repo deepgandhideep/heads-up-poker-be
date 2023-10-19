@@ -1,7 +1,7 @@
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
-const PokerSolver = require("pokersolver").Hand;
+const Hand = require("pokersolver").Hand;
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +23,8 @@ let gameState = {
   pot: 0,
   turn: null,
   stage: "pre-flop",
+  winner: "",
+  reason: "",
   deck: [],
 };
 
@@ -63,15 +65,22 @@ function dealCards(n) {
 
 function evaluateWinner(player1Hand, player2Hand, board) {
   // Create hands in the format the library expects
-  const player1Eval = PokerSolver.solve(player1Hand.concat(board));
-  const player2Eval = PokerSolver.solve(player2Hand.concat(board));
+  const player1Eval = Hand.solve(player1Hand.concat(board));
+  const player2Eval = Hand.solve(player2Hand.concat(board));
 
   // Compare the hands
-  const winner = PokerSolver.winners([player1Eval, player2Eval]);
+  const winner = Hand.winners([player1Eval, player2Eval]);
 
   if (winner.length === 1) {
-    if (winner[0] === player1Eval) return "player1";
-    else return "player2";
+    if (winner[0] === player1Eval) {
+      gameState.winner = "player1";
+      gameState.reason = player1Eval.descr;
+      return "player1";
+    } else {
+      gameState.winner = "player2";
+      gameState.reason = player2Eval.descr;
+      return "player2";
+    }
   } else {
     return "draw";
   }
@@ -165,14 +174,18 @@ io.on("connection", (socket) => {
   });
 
   socket.on("showdown", () => {
+    console.log("showdown");
     const player1Id = Object.keys(gameState.players)[0];
     const player2Id = Object.keys(gameState.players)[1];
+    console.log(player1Id + " " + player2Id);
 
     const winner = evaluateWinner(
       gameState.players[player1Id].hand,
       gameState.players[player2Id].hand,
       gameState.board
     );
+
+    console.log("Winner " + winner);
 
     switch (winner) {
       case "player1":
@@ -192,6 +205,7 @@ io.on("connection", (socket) => {
     }
 
     gameState.pot = 0;
+    console.log("postwin state " + JSON.stringify(gameState));
     io.emit("gameState", gameState);
   });
 

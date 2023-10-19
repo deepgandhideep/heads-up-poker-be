@@ -5,6 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Game State - Dealer</title>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+      function updateDealerActions(gameState) {
+        const startGameBtn = document.getElementById("startGame");
+        const nextStageBtn = document.getElementById("nextStage");
+        const showWinnerBtn = document.getElementById("showWinner");
+
+        // Enable "Start Game" if there are 2 players and stage is "pre-flop"
+        startGameBtn.disabled = !(
+          Object.keys(gameState.players).length === 2 &&
+          gameState.stage === "pre-flop"
+        );
+
+        // Enable "Next Stage" if stage is "flop", "turn", or "river"
+        nextStageBtn.disabled = !["flop", "turn", "river"].includes(
+          gameState.stage
+        );
+
+        // Enable "Show Winner" if stage is "showdown"
+        showWinnerBtn.disabled = !(gameState.stage === "showdown");
+      }
+
+      socket.on("gameState", (data) => {
+        document.getElementById("gameState").textContent = JSON.stringify(
+          data,
+          null,
+          2
+        );
+        updateDealerActions(data);
+
+        // Existing code to display players' cards and community cards
+        // ...
+      });
+    </script>
   </head>
   <body>
     <h1>Game State - Dealer</h1>
@@ -59,7 +92,37 @@
       });
 
       document.getElementById("showWinner").addEventListener("click", () => {
-        socket.emit("dealerAction", { action: "showWinner" });
+        socket.emit("showdown", { action: "showWinner" });
+      });
+    </script>
+    <script>
+      function updateDealerActions(gameState) {
+        const startGameBtn = document.getElementById("startGame");
+        const nextStageBtn = document.getElementById("nextStage");
+        const showWinnerBtn = document.getElementById("showWinner");
+
+        // Enable "Start Game" if there are 2 players and stage is "pre-flop"
+        startGameBtn.disabled = !(
+          Object.keys(gameState.players).length === 2 &&
+          gameState.stage === "pre-flop"
+        );
+
+        // Enable "Next Stage" if stage is "flop", "turn", or "river"
+        nextStageBtn.disabled = !["flop", "turn", "river"].includes(
+          gameState.stage
+        );
+
+        // Enable "Show Winner" if stage is "showdown"
+        showWinnerBtn.disabled = !(gameState.stage === "showdown");
+      }
+
+      socket.on("gameState", (data) => {
+        document.getElementById("gameState").textContent = JSON.stringify(
+          data,
+          null,
+          2
+        );
+        updateDealerActions(data);
       });
     </script>
   </body>
