@@ -1,13 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Game State - Dealer</title>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Game State - Dealer</h1>
 
     <h3>Players' Cards:</h3>
@@ -17,32 +16,51 @@
     <pre id="communityCards"></pre>
 
     <div id="actions">
-        <pre id="gameState"></pre>
-        <button id="startGame">Start Game</button>
-        <button id="nextStage">Next Stage</button>
-        <button id="showWinner">Show Winner</button>
+      <pre id="gameState"></pre>
+      <button id="startGame">Start Game</button>
+      <button id="nextStage">Next Stage</button>
+      <button id="showWinner">Show Winner</button>
     </div>
 
     <script>
-        const socket = io.connect('http://localhost:3000');
+      const socket = io.connect("http://localhost:3000");
 
-        socket.on('gameState', (data) => {
-            document.getElementById('gameState').textContent = JSON.stringify(data, null, 2);
+      socket.on("gameState", (data) => {
+        document.getElementById("gameState").textContent = JSON.stringify(
+          data,
+          null,
+          2
+        );
 
-            let playersCards = {};
-            if (data.players) {
-                for (let playerId in data.players) {
-                    playersCards[playerId] = data.players[playerId].hand;
-                }
-            }
-            document.getElementById('allPlayersCards').textContent = JSON.stringify(playersCards, null, 2);
+        let playersCards = {};
+        if (data.players) {
+          for (let playerId in data.players) {
+            playersCards[playerId] = data.players[playerId].hand;
+          }
+        }
+        document.getElementById("allPlayersCards").textContent = JSON.stringify(
+          playersCards,
+          null,
+          2
+        );
 
-            if (data.board) {
-                document.getElementById('communityCards').textContent = JSON.stringify(data.board, null, 2);
-            }
-        });
+        if (data.board) {
+          document.getElementById("communityCards").textContent =
+            JSON.stringify(data.board, null, 2);
+        }
+      });
 
-        // ... [Rest of the actions as previously defined]
+      document.getElementById("startGame").addEventListener("click", () => {
+        socket.emit("startGame");
+      });
+
+      document.getElementById("nextStage").addEventListener("click", () => {
+        socket.emit("dealerAction", { action: "nextStage" });
+      });
+
+      document.getElementById("showWinner").addEventListener("click", () => {
+        socket.emit("dealerAction", { action: "showWinner" });
+      });
     </script>
-</body>
+  </body>
 </html>
