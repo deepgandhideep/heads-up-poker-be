@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texas Hold'em Game</title>
+</head>
+<body>
+    <!-- Your HTML content and game interface can go here -->
+
+    <script src="player.js"></script>
+    <script src="deck.js"></script>
+    <script src="pokersolver.js"></script>
+    <script src="texasHoldem.js"></script>
+
+    <script>
+        // JavaScript code to set up and run your Texas Hold'em game here
+        const player1 = new Player("Player 1", 1000); // Customize player name and initial chips
+        const player2 = new Player("Player 2", 1000); // Customize player name and initial chips
+        const game = new TexasHoldem(player1, player2);
+
+        // Add any game initialization or event listeners here
+
+        // Start the game
+        game.playGame();
+    </script>
+</body>
+</html>
