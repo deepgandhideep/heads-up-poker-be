@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texas Hold'em</title>
+</head>
+<body>
+
+<!-- Your HTML content here -->
+
+<script type="module">
+    import TexasHoldem from './texasholdem_v1.js';
+
+    // Create players and other necessary instances here
+    let player1 = new Player("v");
+    let player2 = new Player("n");
+
+    let game = new TexasHoldem(player1, player2);
+    // Call methods on game as required
+    game.dealInitialCards();
+    // ... and so on
+</script>
+
+</body>
+</html>

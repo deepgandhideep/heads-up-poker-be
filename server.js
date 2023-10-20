@@ -16,6 +16,10 @@ app.get("/dealer", (req, res) => {
   res.sendFile(path.join(__dirname, "dealer.html"));
 });
 
+app.get("/thm", (req, res) => {
+    res.sendFile(path.join(__dirname, "thm_v2.html"));
+  });
+
 // Game state
 let gameState = {
   players: {},

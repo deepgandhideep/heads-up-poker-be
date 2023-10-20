@@ -1,11 +1,12 @@
-import Player from './player.js';
-import Deck from './deck.js';
+import Player from "./player_v1";
+import Deck from './deck_v1.js';
 import prompt from 'prompt';
 const PokerSolver = require('pokersolver').Hand; 
 
 
 class TexasHoldem {
     constructor(player1, player2) {
+        console.log("init")
         this.deck = new Deck();
         this.players = [player1, player2];
         this.pot = 0;
@@ -13,6 +14,9 @@ class TexasHoldem {
         this.current_bet = 0;
         this.current_bettor = 0; // 0 or 1 for heads-up
     }
+
+
+    
   
     resetForNewRound() {
         this.deck = new Deck();
@@ -286,6 +290,28 @@ class TexasHoldem {
 
         console.log("Thank you for playing!");
     }
+}
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const startButton = document.getElementById('start-button');
+        const continueButton = document.getElementById('continue-button');
+        const player1NameInput = document.getElementById('player1-name');
+        const player2NameInput = document.getElementById('player2-name');
+    
+        startButton.addEventListener('click', () => {
+            const player1 = new Player(player1NameInput.value, 1000); // Customize player name and initial chips
+            const player2 = new Player(player2NameInput.value, 1000); // Customize player name and initial chips
+            const game = new TexasHoldem(player1, player2);
+    
+            // Start the game
+            game.playGame();
+        });
+    
+        continueButton.addEventListener('click', () => {
+            // Handle continuing the game here
+        });
+    });
+    
 
 TexasHoldem.MIN_BET = 50;
 module.exports = TexasHoldem; 
