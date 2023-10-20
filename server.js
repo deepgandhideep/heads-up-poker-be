@@ -24,8 +24,15 @@ let gameState = {
   turn: null,
   stage: "pre-flop",
   winner: "",
+  amountToCall: 0,
   reason: "",
   deck: [],
+  actions: {
+    "pre-flop": {},
+    "flop": {},
+    "turn": {},
+    "river": {},
+  }
 };
 
 // Helper functions
@@ -86,6 +93,19 @@ function evaluateWinner(player1Hand, player2Hand, board) {
   }
 }
 
+function bet(betAmount, socket) {
+  if (gameState.players[socket.id].stack >= betAmount) {
+    gameState.players[socket.id].stack -= betAmount;
+    gameState.players[socket.id].bet = betAmount;
+    gameState.pot += betAmount;
+    gameState.turn = Object.keys(gameState.players).find(
+      (id) => id !== socket.id
+    );
+  } else {
+    socket.emit("message", "Insufficient chips to bet that amount.");
+  }
+}
+
 function dealCommunityCards() {
   switch (gameState.stage) {
     case "flop":
@@ -127,47 +147,66 @@ io.on("connection", (socket) => {
   });
 
   socket.on("playerAction", (action) => {
+    const playerId = socket.id;
+    const player = gameState.players[playerId];
+    
+    // Record the action for the current round and player
+    if (!gameState.actions[gameState.stage][playerId]) {
+        gameState.actions[gameState.stage][playerId] = [];
+    }
+    gameState.actions[gameState.stage][playerId].push({
+        type: action.type,
+        amount: action.amount || 0,
+        timestamp: new Date().toISOString()
+    });
+    
     switch (action.type) {
       case "fold":
-        gameState.turn = Object.keys(gameState.players).find(
-          (id) => id !== socket.id
-        );
-        gameState.players[socket.id].bet = 0;
+        gameState.turn = getOpponentId(playerId);
+        player.bet = 0;
         break;
       case "check":
-        gameState.turn = Object.keys(gameState.players).find(
-          (id) => id !== socket.id
-        );
+        gameState.turn = getOpponentId(playerId);
+        break;
+      case "call":
+        const callAmount = gameState.amountToCall - player.bet;
+        player.bet += callAmount;
+        gameState.pot += callAmount;
+        gameState.amountToCall = 0;
+        gameState.turn = getOpponentId(playerId);
         break;
       case "bet":
         const betAmount = action.amount;
-        if (gameState.players[socket.id].stack >= betAmount) {
-          gameState.players[socket.id].stack -= betAmount;
-          gameState.players[socket.id].bet = betAmount;
-          gameState.pot += betAmount;
-          gameState.turn = Object.keys(gameState.players).find(
-            (id) => id !== socket.id
-          );
-        } else {
-          socket.emit("message", "Insufficient chips to bet that amount.");
-        }
+        gameState.amountToCall = betAmount - player.bet;
+        gameState.pot += gameState.amountToCall;
+        player.bet = betAmount;
+        gameState.turn = getOpponentId(playerId);
         break;
       default:
         console.error("Unknown player action:", action.type);
     }
     io.emit("gameState", gameState);
-  });
+});
+
+function getOpponentId(currentPlayerId) {
+    return Object.keys(gameState.players).find(id => id !== currentPlayerId);
+}
+
 
   socket.on("startGame", () => {
     if (Object.keys(gameState.players).length === 2) {
-      initializeDeck();
-      for (const playerId in gameState.players) {
-        gameState.players[playerId].hand.push(...dealCards(2));
+      if (validateDealerAction()) {
+        initializeDeck();
+        for (const playerId in gameState.players) {
+          gameState.players[playerId].hand.push(...dealCards(2));
+        }
+        gameState.turn = Object.keys(gameState.players)[0];
+        gameState.stage = "flop";
+        io.emit("gameState", gameState);
+        io.emit("message", "The game has started!");
+      } else {
+        socket.emit("message", "Invalid game state");
       }
-      gameState.turn = Object.keys(gameState.players)[0];
-      gameState.stage = "flop";
-      io.emit("gameState", gameState);
-      io.emit("message", "The game has started!");
     } else {
       socket.emit("message", "Need two players to start the game.");
     }
@@ -210,7 +249,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("dealerAction", () => {
-    if (["flop", "turn", "river"].includes(gameState.stage)) {
+    if (validateDealerAction()) {
       dealCommunityCards();
       io.emit("gameState", gameState);
     } else {
@@ -220,6 +259,32 @@ io.on("connection", (socket) => {
       );
     }
   });
+
+  function validateDealerAction() {
+    // For simplicity, I'm checking if the actions for the current stage have at least one action for each player.
+    // Depending on your game logic, you might need more detailed validation.
+    const playerActionsForCurrentStage = Object.keys(
+      gameState.actions[gameState.stage]
+    );
+    console.log("Actions "+playerActionsForCurrentStage);
+    const allPlayersHaveActed = Object.keys(gameState.players).every(
+      (playerID) => playerActionsForCurrentStage.includes(playerID)
+    );
+
+    if (!allPlayersHaveActed) {
+      console.log("All players not acted");
+      return false; // Not all players have taken an action in the current stage
+    }
+
+    // If the current stage is "pre-flop", "flop", or "turn", dealer action is valid
+    if (["pre-flop", "flop", "turn", "river"].includes(gameState.stage)) {
+      return true;
+    }
+
+    console.log("Invalid game state");
+
+    return false; // For any other stage, dealer action is not valid
+  }
 
   socket.on("disconnect", () => {
     console.log("User disconnected: " + socket.id);
