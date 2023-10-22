@@ -1,78 +1,24 @@
-const express = require("express");
-const http = require("http");
-const socketIo = require("socket.io");
-const Hand = require("pokersolver").Hand;
-
+import express from "express";
+import { createServer } from "http";
+import socketIo from "socket.io";
+import { Hand } from "pokersolver";
+import Player from "./player_v1.js";
+import TexasHoldem from "./texasholdem_v1.js";
 const app = express();
-const server = http.createServer(app);
+const server = createServer(app);
 const io = socketIo(server);
 
-const path = require("path");
+import { join } from "path";
 app.get("/player", (req, res) => {
-  res.sendFile(path.join(__dirname, "player.html"));
+  res.sendFile(join(__dirname, "player.html"));
 });
 
 app.get("/dealer", (req, res) => {
-  res.sendFile(path.join(__dirname, "dealer.html"));
+  res.sendFile(join(__dirname, "dealer.html"));
 });
 
-app.get("/thm", (req, res) => {
-    res.sendFile(path.join(__dirname, "thm_v2.html"));
-  });
-
-// Game state
-let gameState = {
-  players: {},
-  board: [],
-  pot: 0,
-  turn: null,
-  stage: "pre-flop",
-  winner: "",
-  amountToCall: 0,
-  reason: "",
-  deck: [],
-  actions: {
-    "pre-flop": {},
-    "flop": {},
-    "turn": {},
-    "river": {},
-  }
-};
-
-// Helper functions
-function initializeDeck() {
-  const suits = ["h", "d", "c", "s"];
-  const values = [
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "T",
-    "J",
-    "Q",
-    "K",
-    "A",
-  ];
-
-  gameState.deck = [];
-
-  for (let suit of suits) {
-    for (let value of values) {
-      gameState.deck.push(value + suit);
-    }
-  }
-
-  // Shuffle the deck
-  gameState.deck.sort(() => Math.random() - 0.5);
-}
-
-function dealCards(n) {
-  return gameState.deck.splice(0, n);
-}
+let players = {};
+let texasHoldem = {};
 
 function evaluateWinner(player1Hand, player2Hand, board) {
   // Create hands in the format the library expects
@@ -136,13 +82,8 @@ io.on("connection", (socket) => {
   console.log("A user connected: " + socket.id);
 
   socket.on("joinGame", (playerName) => {
-    if (Object.keys(gameState.players).length < 2) {
-      gameState.players[socket.id] = {
-        name: playerName,
-        hand: [],
-        stack: 1000,
-        bet: 0,
-      };
+    if (Object.keys(players).length < 2) {
+      players[socket.id] = new Player(playerName);
       socket.emit("gameState", gameState);
       io.emit("message", `${playerName} has joined the game.`);
     } else {
@@ -153,17 +94,17 @@ io.on("connection", (socket) => {
   socket.on("playerAction", (action) => {
     const playerId = socket.id;
     const player = gameState.players[playerId];
-    
+
     // Record the action for the current round and player
     if (!gameState.actions[gameState.stage][playerId]) {
-        gameState.actions[gameState.stage][playerId] = [];
+      gameState.actions[gameState.stage][playerId] = [];
     }
     gameState.actions[gameState.stage][playerId].push({
-        type: action.type,
-        amount: action.amount || 0,
-        timestamp: new Date().toISOString()
+      type: action.type,
+      amount: action.amount || 0,
+      timestamp: new Date().toISOString(),
     });
-    
+
     switch (action.type) {
       case "fold":
         gameState.turn = getOpponentId(playerId);
@@ -190,27 +131,18 @@ io.on("connection", (socket) => {
         console.error("Unknown player action:", action.type);
     }
     io.emit("gameState", gameState);
-});
+  });
 
-function getOpponentId(currentPlayerId) {
-    return Object.keys(gameState.players).find(id => id !== currentPlayerId);
-}
-
+  function getOpponentId(currentPlayerId) {
+    return Object.keys(gameState.players).find((id) => id !== currentPlayerId);
+  }
 
   socket.on("startGame", () => {
-    if (Object.keys(gameState.players).length === 2) {
-      if (validateDealerAction()) {
-        initializeDeck();
-        for (const playerId in gameState.players) {
-          gameState.players[playerId].hand.push(...dealCards(2));
-        }
-        gameState.turn = Object.keys(gameState.players)[0];
-        gameState.stage = "flop";
-        io.emit("gameState", gameState);
-        io.emit("message", "The game has started!");
-      } else {
-        socket.emit("message", "Invalid game state");
-      }
+    if (Object.keys(players).length === 2) {
+      texasHoldem = new TexasHoldem(players[0], players[1]);
+      texasHoldem.playGame();
+      io.emit("gameState", texasHoldem.gameState);
+      io.emit("message", "The game has started!");
     } else {
       socket.emit("message", "Need two players to start the game.");
     }
@@ -263,32 +195,6 @@ function getOpponentId(currentPlayerId) {
       );
     }
   });
-
-  function validateDealerAction() {
-    // For simplicity, I'm checking if the actions for the current stage have at least one action for each player.
-    // Depending on your game logic, you might need more detailed validation.
-    const playerActionsForCurrentStage = Object.keys(
-      gameState.actions[gameState.stage]
-    );
-    console.log("Actions "+playerActionsForCurrentStage);
-    const allPlayersHaveActed = Object.keys(gameState.players).every(
-      (playerID) => playerActionsForCurrentStage.includes(playerID)
-    );
-
-    if (!allPlayersHaveActed) {
-      console.log("All players not acted");
-      return false; // Not all players have taken an action in the current stage
-    }
-
-    // If the current stage is "pre-flop", "flop", or "turn", dealer action is valid
-    if (["pre-flop", "flop", "turn", "river"].includes(gameState.stage)) {
-      return true;
-    }
-
-    console.log("Invalid game state");
-
-    return false; // For any other stage, dealer action is not valid
-  }
 
   socket.on("disconnect", () => {
     console.log("User disconnected: " + socket.id);
