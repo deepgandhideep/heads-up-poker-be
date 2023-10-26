@@ -84,10 +84,12 @@
       });
 
       document.getElementById("startGame").addEventListener("click", () => {
+        console.log("DealerAct");
         socket.emit("startGame");
       });
 
       document.getElementById("nextStage").addEventListener("click", () => {
+        console.log("DealerAct nextStage");
         socket.emit("dealerAction", { action: "nextStage" });
       });
 

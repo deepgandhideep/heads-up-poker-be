@@ -1,18 +1,23 @@
-import Player from "./player_v1";
-import Deck from "./deck_v1.js";
-import prompt from "prompt";
-const PokerSolver = require("pokersolver").Hand;
+const Player = require("./player_v1");
+const Deck = require("./deck_v1");
+const { Hand } = require("pokersolver");
 
 let gameState = {
   players: [],
   community_cards: [],
   pot: 0,
-  deck: [],
+  deck: {},
+  state: {},
+  winner: "",
+  reason: "",
 };
 
 class TexasHoldem {
   constructor(player1, player2) {
-    console.log("init");
+    console.log(
+      "init " + JSON.stringify(player1) + " " + JSON.stringify(player2)
+    );
+
     gameState.deck = new Deck();
     gameState.players = [player1, player2];
     gameState.pot = 0;
@@ -20,29 +25,37 @@ class TexasHoldem {
   }
 
   resetForNewRound() {
-    this.deck = new Deck();
-    this.pot = 0;
-    this.community_cards = [];
-    for (let player of this.players) {
+    gameState.deck = new Deck();
+    gameState.deck.shuffleCards();
+    gameState.pot = 0;
+    gameState.community_cards = [];
+    for (let player of gameState.players) {
       player.hand = [];
       player.currentBet = 0;
       player.hasFolded = false;
     }
   }
   dealInitialCards() {
-    for (let player of this.players) {
-      player.receiveCards([this.deck.deal(), this.deck.deal()]);
+    gameState.deck.shuffleCards();
+    for (let player of gameState.players) {
+      player.receiveCards([gameState.deck.deal(), gameState.deck.deal()]);
     }
+    gameState.state = "pre-flop";
   }
 
   dealFlop() {
     for (let i = 0; i < 3; i++) {
-      this.community_cards.push(this.deck.deal());
+      gameState.community_cards.push(gameState.deck.deal());
     }
+    gameState.state = "flop";
+    console.log("gs after flopdeal " + JSON.stringify(gameState));
   }
 
   dealTurnOrRiver() {
-    this.community_cards.push(this.deck.deal());
+    gameState.community_cards.push(gameState.deck.deal());
+    if (gameState.state == "flop") gameState.state = "turn";
+    else if (gameState.state == "turn") gameState.state = "river";
+    console.log("gs after dealTurnOrRiver " + JSON.stringify(gameState));
   }
 
   playerCheck(player) {
@@ -104,202 +117,40 @@ class TexasHoldem {
     return currentBet + raiseAmount;
   }
 
-  async getActionFromPlayer(player, contributions) {
-    let validAction = false;
-
-    while (!validAction) {
-      const availableActions =
-        player.currentBet === this.currentBet
-          ? "[check], [raise], or [fold]"
-          : "[call], [raise], or [fold]";
-      const action = await prompt(
-        `Player ${player.name}, do you want to ${availableActions}?`
-      );
-
-      switch (action.toLowerCase()) {
-        case "check":
-          if (player.currentBet === this.currentBet) {
-            this.playerCheck(player);
-            validAction = true;
-          } else {
-            console.log(
-              "You can't check now. The current table bet is higher than yours."
-            );
-          }
-          break;
-
-        case "call":
-          this.currentBet = this.playerCall(
-            player,
-            this.currentBet,
-            contributions
-          );
-          validAction = true;
-          break;
-
-        case "raise":
-          const raiseAmount = parseInt(
-            await prompt(
-              `Player ${player.name}, how much do you want to raise?`
-            ),
-            10
-          );
-          if (
-            raiseAmount > 0 &&
-            raiseAmount <= player.chips - player.currentBet
-          ) {
-            this.currentBet = this.playerRaise(
-              player,
-              raiseAmount,
-              this.currentBet,
-              contributions
-            );
-            validAction = true;
-          } else {
-            console.log("Invalid raise amount.");
-          }
-          break;
-
-        case "fold":
-          this.playerFold(player);
-          validAction = true;
-          break;
-
-        default:
-          console.log(`Invalid action. Please choose ${availableActions}.`);
-          break;
-      }
-    }
-  }
-
-  async collectBets() {
-    // Reset initial states
-    this.roundIsOver = false;
-    this.currentBet = 0;
-    let contributions = {
-      [this.players[0].name]: 0,
-      [this.players[1].name]: 0,
-    };
-    this.pot = 0;
-
-    while (!this.roundIsOver) {
-      for (let player of this.players) {
-        if (player.hasFolded) {
-          this.roundIsOver = true;
-          break;
-        }
-
-        if (
-          player.currentBet < this.currentBet ||
-          contributions[player.name] < this.currentBet
-        ) {
-          await this.getActionFromPlayer(player, contributions);
-        }
-
-        if (this.players[0].hasFolded || this.players[1].hasFolded) {
-          this.roundIsOver = true;
-        }
-      }
-    }
-
-    // Collect the bets and add them to the pot
-    for (let player of this.players) {
-      this.pot += player.currentBet;
-      player.chips -= player.currentBet;
-      player.currentBet = 0;
-    }
-    return true;
-  }
-
-  determineWinner() {
-    // Determine winner using PokerSolver
-    let player1Hand = PokerSolver.solve([
-      ...this.players[0].hand,
-      ...this.community_cards,
-    ]);
-    let player2Hand = PokerSolver.solve([
-      ...this.players[1].hand,
-      ...this.community_cards,
-    ]);
-
-    let winners = PokerSolver.winners([player1Hand, player2Hand]);
-
-    if (winners.length === 1) {
-      let winningPlayer =
-        winners[0] === player1Hand ? this.players[0] : this.players[1];
-      console.log(`The winning hand is: ${winners[0].descr}`);
-      return winningPlayer;
-    } else {
-      return null; // Tie
-    }
-  }
-
-  playRound() {
-    // 1. Reset for a new round
+  dealHands() {
     this.resetForNewRound();
-
-    // 2. Deal initial cards
     this.dealInitialCards();
+  }
 
-    Card.printPrettyCards(this.players[0].hand);
-    Card.printPrettyCards(this.players[1].hand);
-
-    // 3. Pre-flop betting
-    if (this.collectBets()) {
-      return;
-    }
-
-    // Check if any player is all-in. If so, reveal all community cards and determine winner.
-    if (this.players.some((player) => player.chips === 0)) {
-      this.dealFlop();
-      this.dealTurnOrRiver();
-      this.dealTurnOrRiver();
-    } else {
-      // 4. Deal the flop
-      this.dealFlop();
-      Card.printPrettyCards(this.community_cards);
-
-      // 5. Betting after the flop
-      if (this.collectBets()) {
-        return;
-      }
-
-      if (this.players.some((player) => player.chips === 0)) {
-        this.dealTurnOrRiver();
-        this.dealTurnOrRiver();
-      } else {
-        // 6. Deal the turn
-        this.dealTurnOrRiver();
-        Card.printPrettyCards(this.community_cards);
-
-        // 7. Betting after the turn
-        if (this.collectBets()) {
-          return;
-        }
-
-        // 8. Deal the river
-        this.dealTurnOrRiver();
-
-        // 8. Betting after the river
-        Card.printPrettyCards(this.community_cards);
-        if (this.collectBets()) {
-          return;
-        }
-      }
-    }
-
-    Card.printPrettyCards(this.community_cards);
-
+  showDown() {
     // 9. Determine the winner
-    let winner = this.determineWinner();
+    const player1Eval = Hand.solve(
+      gameState.players[0].hand.concat(gameState.community_cards)
+    );
+    const player2Eval = Hand.solve(
+      gameState.players[1].hand.concat(gameState.community_cards)
+    );
+    const winner = Hand.winners([player1Eval, player2Eval]);
+
+    if (winner.length === 1) {
+      if (winner[0] === player1Eval) {
+        gameState.winner = gameState.players[0];
+        gameState.reason = player1Eval.descr;
+      } else {
+        gameState.winner = gameState.players[1];
+        gameState.reason = player2Eval.descr;
+      }
+    } else {
+      gameState.winner = null;
+    }
 
     // 10. Distribute the pot
-    if (winner) {
-      winner.receiveChips(this.pot);
-      console.log(`${winner.name} wins ${this.pot} chips!`);
+    if (gameState.winner) {
+      gameState.winner.receiveChips(gameState.pot);
+      console.log(`${winner.name} wins ${gameState.pot} chips!`);
     } else {
       // Pot split in case of a tie
-      let potHalf = Math.floor(this.pot / 2);
+      let potHalf = Math.floor(gameState.pot / 2);
       this.players[0].receiveChips(potHalf);
       this.players[1].receiveChips(potHalf);
       console.log(`It's a tie! Each player receives ${potHalf} chips.`);
@@ -309,64 +160,20 @@ class TexasHoldem {
   playGame() {
     // Assuming each player starts with 1000 chips
     console.log("Welcome to Heads-Up Texas Hold'em!");
+    console.log("gs " + JSON.stringify(gameState));
     console.log(
-      `Player 1: ${this.players[0].name} with ${this.players[0].chips} chips.`
+      `Player 1: ${gameState.players[0].name} with ${gameState.players[0].chips} chips.`
     );
     console.log(
-      `Player 2: ${this.players[1].name} with ${this.players[1].chips} chips.`
+      `Player 2: ${gameState.players[1].name} with ${gameState.players[1].chips} chips.`
     );
 
-    while (this.players[0].chips > 0 && this.players[1].chips > 0) {
-      this.playRound();
-
-      // Check if a player has lost all chips
-      for (let player of this.players) {
-        if (player.chips <= 0) {
-          console.log(`${player.name} has run out of chips.`);
-          return;
-        }
-      }
-
-      console.log(
-        `Player 1: ${this.players[0].name} with ${this.players[0].chips} chips.`
-      );
-      console.log(
-        `Player 2: ${this.players[1].name} with ${this.players[1].chips} chips.`
-      );
-
-      // Prompt for continuation or exit
-      // This is a synchronous prompt using the 'prompt' function in Node.js environments
-      let continueGame = prompt("Continue to next round? (yes/no): ")
-        .trim()
-        .toLowerCase();
-      if (continueGame !== "yes") {
-        break;
-      }
-    }
-
-    console.log("Thank you for playing!");
+    this.dealHands();
+  }
+  getGameState() {
+    return gameState;
   }
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  const startButton = document.getElementById("start-button");
-  const continueButton = document.getElementById("continue-button");
-  const player1NameInput = document.getElementById("player1-name");
-  const player2NameInput = document.getElementById("player2-name");
-
-  startButton.addEventListener("click", () => {
-    const player1 = new Player(player1NameInput.value, 1000); // Customize player name and initial chips
-    const player2 = new Player(player2NameInput.value, 1000); // Customize player name and initial chips
-    const game = new TexasHoldem(player1, player2);
-
-    // Start the game
-    game.playGame();
-  });
-
-  continueButton.addEventListener("click", () => {
-    // Handle continuing the game here
-  });
-});
 
 TexasHoldem.MIN_BET = 50;
 module.exports = TexasHoldem;

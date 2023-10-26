@@ -1,4 +1,4 @@
-import { shuffle } from "lodash";
+const { shuffle } = require("lodash");
 
 class Deck {
   static STR_RANKS = [
@@ -25,12 +25,11 @@ class Deck {
   static _FULL_DECK = [];
 
   constructor() {
-    this.shuffle();
+    this.shuffleCards();
   }
 
-  shuffle() {
-    this.cards = Deck.getFullDeck();
-    shuffle(this.cards);
+  shuffleCards() {
+    this.cards = shuffle(Deck.getFullDeck());
   }
 
   deal(n = 1) {
@@ -64,4 +63,4 @@ class Deck {
   }
 }
 
-export default Deck;
+module.exports = Deck;

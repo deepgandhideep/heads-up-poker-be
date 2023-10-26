@@ -1,14 +1,14 @@
-import express from "express";
-import { createServer } from "http";
-import socketIo from "socket.io";
-import { Hand } from "pokersolver";
-import Player from "./player_v1.js";
-import TexasHoldem from "./texasholdem_v1.js";
+const express = require("express");
+const { createServer } = require("http");
+const socketIoLib = require("socket.io");
+const Player = require("./player_v1");
+const TexasHoldem = require("./texasholdem_v1");
+const { join } = require("path");
+
 const app = express();
 const server = createServer(app);
-const io = socketIo(server);
+const io = socketIoLib(server);
 
-import { join } from "path";
 app.get("/player", (req, res) => {
   res.sendFile(join(__dirname, "player.html"));
 });
@@ -17,31 +17,8 @@ app.get("/dealer", (req, res) => {
   res.sendFile(join(__dirname, "dealer.html"));
 });
 
-let players = {};
+let players = [];
 let texasHoldem = {};
-
-function evaluateWinner(player1Hand, player2Hand, board) {
-  // Create hands in the format the library expects
-  const player1Eval = Hand.solve(player1Hand.concat(board));
-  const player2Eval = Hand.solve(player2Hand.concat(board));
-
-  // Compare the hands
-  const winner = Hand.winners([player1Eval, player2Eval]);
-
-  if (winner.length === 1) {
-    if (winner[0] === player1Eval) {
-      gameState.winner = "player1";
-      gameState.reason = player1Eval.descr;
-      return "player1";
-    } else {
-      gameState.winner = "player2";
-      gameState.reason = player2Eval.descr;
-      return "player2";
-    }
-  } else {
-    return "draw";
-  }
-}
 
 function bet(betAmount, socket) {
   if (gameState.players[socket.id].stack >= betAmount) {
@@ -56,35 +33,13 @@ function bet(betAmount, socket) {
   }
 }
 
-function dealCommunityCards() {
-  switch (gameState.stage) {
-    case "flop":
-      gameState.board.push(...dealCards(3));
-      gameState.stage = "turn";
-      break;
-    case "turn":
-      gameState.board.push(...dealCards(1));
-      gameState.stage = "river";
-      break;
-    case "river":
-      gameState.board.push(...dealCards(1));
-      gameState.stage = "showdown";
-      break;
-    default:
-      console.error(
-        "Incorrect stage for dealing community cards:",
-        gameState.stage
-      );
-  }
-}
-
 io.on("connection", (socket) => {
   console.log("A user connected: " + socket.id);
 
   socket.on("joinGame", (playerName) => {
     if (Object.keys(players).length < 2) {
-      players[socket.id] = new Player(playerName);
-      socket.emit("gameState", gameState);
+      players[players.length] = new Player(playerName);
+      console.log("pl " + JSON.stringify(players));
       io.emit("message", `${playerName} has joined the game.`);
     } else {
       socket.emit("message", "The game is full.");
@@ -130,7 +85,7 @@ io.on("connection", (socket) => {
       default:
         console.error("Unknown player action:", action.type);
     }
-    io.emit("gameState", gameState);
+    io.emit("gameState", texasHoldem.gameState);
   });
 
   function getOpponentId(currentPlayerId) {
@@ -138,6 +93,7 @@ io.on("connection", (socket) => {
   }
 
   socket.on("startGame", () => {
+    console.log("sg");
     if (Object.keys(players).length === 2) {
       texasHoldem = new TexasHoldem(players[0], players[1]);
       texasHoldem.playGame();
@@ -150,56 +106,22 @@ io.on("connection", (socket) => {
 
   socket.on("showdown", () => {
     console.log("showdown");
-    const player1Id = Object.keys(gameState.players)[0];
-    const player2Id = Object.keys(gameState.players)[1];
-    console.log(player1Id + " " + player2Id);
-
-    const winner = evaluateWinner(
-      gameState.players[player1Id].hand,
-      gameState.players[player2Id].hand,
-      gameState.board
-    );
-
-    console.log("Winner " + winner);
-
-    switch (winner) {
-      case "player1":
-        gameState.players[player1Id].stack += gameState.pot;
-        io.emit("message", "Player 1 wins the pot!");
-        break;
-      case "player2":
-        gameState.players[player2Id].stack += gameState.pot;
-        io.emit("message", "Player 2 wins the pot!");
-        break;
-      case "draw":
-        const splitPot = gameState.pot / 2;
-        gameState.players[player1Id].stack += splitPot;
-        gameState.players[player2Id].stack += splitPot;
-        io.emit("message", "It's a draw! The pot is split.");
-        break;
-    }
-
-    gameState.pot = 0;
-    console.log("postwin state " + JSON.stringify(gameState));
-    io.emit("gameState", gameState);
+    texasHoldem.showDown();
+    console.log("postwin state " + JSON.stringify(texasHoldem.gameState));
+    io.emit("gameState", texasHoldem.gameState);
   });
 
   socket.on("dealerAction", () => {
-    if (validateDealerAction()) {
-      dealCommunityCards();
-      io.emit("gameState", gameState);
-    } else {
-      socket.emit(
-        "message",
-        `Can't proceed to the next stage from ${gameState.stage}.`
-      );
-    }
+    if (texasHoldem.getGameState().community_cards.length == 0)
+      texasHoldem.dealFlop();
+    else texasHoldem.dealTurnOrRiver();
+    io.emit("gameState", texasHoldem.gameState);
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected: " + socket.id);
-    delete gameState.players[socket.id];
-    io.emit("gameState", gameState);
+    //delete gameState.players[socket.id];
+    io.emit("gameState", texasHoldem.gameState);
     io.emit("message", "A player has left the game.");
   });
 });
