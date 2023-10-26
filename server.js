@@ -17,7 +17,7 @@ app.get("/dealer", (req, res) => {
   res.sendFile(join(__dirname, "dealer.html"));
 });
 
-let players = [];
+let players = {};
 let texasHoldem = {};
 
 function bet(betAmount, socket) {
@@ -38,7 +38,9 @@ io.on("connection", (socket) => {
 
   socket.on("joinGame", (playerName) => {
     if (Object.keys(players).length < 2) {
-      players[players.length] = new Player(playerName);
+      let id = socket.id;
+      console.log("id " + id);
+      players[id] = new Player(playerName);
       console.log("pl " + JSON.stringify(players));
       io.emit("message", `${playerName} has joined the game.`);
     } else {
@@ -48,43 +50,10 @@ io.on("connection", (socket) => {
 
   socket.on("playerAction", (action) => {
     const playerId = socket.id;
-    const player = gameState.players[playerId];
+    const player = players[playerId];
 
-    // Record the action for the current round and player
-    if (!gameState.actions[gameState.stage][playerId]) {
-      gameState.actions[gameState.stage][playerId] = [];
-    }
-    gameState.actions[gameState.stage][playerId].push({
-      type: action.type,
-      amount: action.amount || 0,
-      timestamp: new Date().toISOString(),
-    });
+    texasHoldem.bettingRound(player, action);
 
-    switch (action.type) {
-      case "fold":
-        gameState.turn = getOpponentId(playerId);
-        player.bet = 0;
-        break;
-      case "check":
-        gameState.turn = getOpponentId(playerId);
-        break;
-      case "call":
-        const callAmount = gameState.amountToCall - player.bet;
-        player.bet += callAmount;
-        gameState.pot += callAmount;
-        gameState.amountToCall = 0;
-        gameState.turn = getOpponentId(playerId);
-        break;
-      case "bet":
-        const betAmount = action.amount;
-        gameState.amountToCall = betAmount - player.bet;
-        gameState.pot += gameState.amountToCall;
-        player.bet = betAmount;
-        gameState.turn = getOpponentId(playerId);
-        break;
-      default:
-        console.error("Unknown player action:", action.type);
-    }
     io.emit("gameState", texasHoldem.gameState);
   });
 
@@ -94,8 +63,10 @@ io.on("connection", (socket) => {
 
   socket.on("startGame", () => {
     console.log("sg");
-    if (Object.keys(players).length === 2) {
-      texasHoldem = new TexasHoldem(players[0], players[1]);
+
+
+    if (Object.values(players).length === 2) {
+      texasHoldem = new TexasHoldem(Object.values(players)[0], Object.values(players)[1]);
       texasHoldem.playGame();
       io.emit("gameState", texasHoldem.gameState);
       io.emit("message", "The game has started!");
