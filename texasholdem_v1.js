@@ -3,24 +3,23 @@ const Deck = require("./deck_v1");
 const { Hand } = require("pokersolver");
 
 let gameState = {
-    community_cards: [],
-    pot: 0,
-    deck: new Deck(),
-    state: "pre-flop",
-    winner: null,
-    winnerName: "",
-    reason: "",
-    
-  };
+  community_cards: [],
+  pot: 0,
+  deck: new Deck(),
+  state: "pre-flop",
+  winner: null,
+  winnerName: "",
+  reason: "",
+};
 
 class TexasHoldem {
   constructor(player1, player2) {
-    gameState.players = [player1, player2],
-    gameState.contributions =  {
+    (gameState.players = [player1, player2]),
+      (gameState.contributions = {
         [player1.name]: 0,
-        [player2.name]: 0
-      }
-      gameState.currentTurn =  player1
+        [player2.name]: 0,
+      });
+    gameState.currentTurn = player1;
     this.resetForNewRound();
   }
 
@@ -46,43 +45,49 @@ class TexasHoldem {
   }
 
   bettingRound(player, action) {
-    console.log("Player "+JSON.stringify(player))
-    console.log("Action "+JSON.stringify(action))
+    console.log("Player " + JSON.stringify(player));
+    console.log("Action " + JSON.stringify(action));
     if (gameState.currentTurn !== player) {
       console.error(`It's not ${player.name}'s turn to act.`);
       return;
     }
 
     switch (action.action) {
-      case 'check':
+      case "check":
         if (gameState.contributions[player.name] < gameState.pot / 2) {
           console.error("Can't check. Need to call or fold.");
         } else {
           this.playerCheck(player);
         }
         break;
-      case 'bet':
-        if (gameState.pot !== 0 && gameState.contributions[player.name] === gameState.pot / 2) {
+      case "bet":
+        if (
+          gameState.pot !== 0 &&
+          gameState.contributions[player.name] === gameState.pot / 2
+        ) {
           console.error("Can't bet now. You can only raise, call, or fold.");
         } else {
           this.playerBet(player, action.amount);
         }
         break;
-      case 'call':
+      case "call":
         this.playerCall(player);
         break;
-      case 'raise':
-        if (gameState.pot === 0 || gameState.contributions[player.name] === gameState.pot / 2) {
+      case "raise":
+        if (
+          gameState.pot === 0 ||
+          gameState.contributions[player.name] === gameState.pot / 2
+        ) {
           console.error("Can't raise now. You can only bet.");
         } else {
           this.playerRaise(player, action.amount);
         }
         break;
-      case 'fold':
+      case "fold":
         this.playerFold(player);
         break;
       default:
-        console.error('Invalid action. Please choose again.');
+        console.error("Invalid action. Please choose again.");
         return;
     }
 
@@ -106,24 +111,23 @@ class TexasHoldem {
   }
 
   playerCall(player) {
-    const otherPlayer = gameState.players.find(p => p !== player);
+    const otherPlayer = gameState.players.find((p) => p !== player);
     const minimumBet = gameState.contributions[otherPlayer.name];
-    const amountToCall = minimumBet - gameState.contributions[player.name];
+    const amountToCall = gameState.pot - minimumBet;
 
     if (amountToCall > player.stack) {
-        console.error("Can't call, amount exceeds player's stack.");
-        return;
+      console.error("Can't call, amount exceeds player's stack.");
+      return;
     }
 
     player.stack -= amountToCall;
     gameState.contributions[player.name] += amountToCall;
     gameState.pot += amountToCall;
     console.log(`${player.name} calls ${amountToCall} chips.`);
-}
-
+  }
 
   playerRaise(player, amount) {
-    const totalAmount = (gameState.pot / 2) + amount;
+    const totalAmount = amount;
 
     if (totalAmount > player.stack) {
       console.error("Raise amount exceeds player's stack.");
@@ -138,14 +142,15 @@ class TexasHoldem {
 
   playerFold(player) {
     console.log(`${player.name} folds.`);
-    player.status = 'folded';
+    player.status = "folded";
   }
 
   nextBettor() {
-    const nextPlayerIndex = (gameState.players.findIndex(p => p === gameState.currentTurn) + 1) % 2;
+    const nextPlayerIndex =
+      (gameState.players.findIndex((p) => p === gameState.currentTurn) + 1) % 2;
 
     const nextPlayer = gameState.players[nextPlayerIndex];
-    if (nextPlayer.status === 'folded') {
+    if (nextPlayer.status === "folded") {
       this.nextBettor();
     } else {
       gameState.currentTurn = nextPlayer;
@@ -157,14 +162,14 @@ class TexasHoldem {
       gameState.community_cards.push(gameState.deck.deal());
     }
     gameState.state = "flop";
-    console.log(JSON.stringify(gameState))
+    console.log(JSON.stringify(gameState));
   }
 
   dealTurnOrRiver() {
     gameState.community_cards.push(gameState.deck.deal());
     if (gameState.state == "flop") gameState.state = "turn";
     else if (gameState.state == "turn") gameState.state = "river";
-    console.log(JSON.stringify(gameState))
+    console.log(JSON.stringify(gameState));
   }
 
   dealHands() {
