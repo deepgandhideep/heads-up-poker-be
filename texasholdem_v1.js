@@ -35,6 +35,14 @@ class TexasHoldem {
     }
   }
 
+  getOtherPlayer(currentPlayer) {
+    if (gameState.players[0].name == currentPlayer.name) {
+      return gameState.players[1];
+    } else {
+      return gameState.players[0];
+    }
+  }
+
   dealInitialCards() {
     gameState.deck.shuffleCards();
     for (let player of gameState.players) {
@@ -54,7 +62,10 @@ class TexasHoldem {
 
     switch (action.action) {
       case "check":
-        if (gameState.contributions[player.name] < gameState.pot / 2) {
+        if (
+          gameState.contributions[player.name] <
+          gameState.contributions[this.getOtherPlayer().name]
+        ) {
           console.error("Can't check. Need to call or fold.");
         } else {
           this.playerCheck(player);
@@ -63,7 +74,8 @@ class TexasHoldem {
       case "bet":
         if (
           gameState.pot !== 0 &&
-          gameState.contributions[player.name] === gameState.pot / 2
+          gameState.contributions[player.name] ===
+            gameState.contributions[this.getOtherPlayer().name]
         ) {
           console.error("Can't bet now. You can only raise, call, or fold.");
         } else {
@@ -76,7 +88,8 @@ class TexasHoldem {
       case "raise":
         if (
           gameState.pot === 0 ||
-          gameState.contributions[player.name] === gameState.pot / 2
+          gameState.contributions[player.name] ===
+            gameState.contributions[this.getOtherPlayer().name]
         ) {
           console.error("Can't raise now. You can only bet.");
         } else {
@@ -98,22 +111,10 @@ class TexasHoldem {
     console.log(`${player.name} checks.`);
   }
 
-  playerBet(player, amount) {
-    if (amount > player.stack) {
-      console.error("Bet amount exceeds player's stack.");
-      return;
-    }
-
-    player.stack -= amount;
-    gameState.contributions[player.name] += amount;
-    gameState.pot += amount;
-    console.log(`${player.name} bets ${amount}.`);
-  }
-
   playerCall(player) {
     const otherPlayer = gameState.players.find((p) => p !== player);
     const minimumBet = gameState.contributions[otherPlayer.name];
-    const amountToCall = gameState.pot - minimumBet;
+    const amountToCall = minimumBet - gameState.contributions[player.name];
 
     if (amountToCall > player.stack) {
       console.error("Can't call, amount exceeds player's stack.");
@@ -124,6 +125,18 @@ class TexasHoldem {
     gameState.contributions[player.name] += amountToCall;
     gameState.pot += amountToCall;
     console.log(`${player.name} calls ${amountToCall} chips.`);
+  }
+
+  playerBet(player, amount) {
+    if (amount > player.stack) {
+      console.error("Bet amount exceeds player's stack.");
+      return;
+    }
+
+    player.stack -= amount;
+    gameState.contributions[player.name] += amount;
+    gameState.pot += amount;
+    console.log(`${player.name} bets ${amount}.`);
   }
 
   playerRaise(player, amount) {
