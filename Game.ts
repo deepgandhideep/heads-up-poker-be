@@ -12,10 +12,10 @@ export class Game {
   currentPlayer: Player;
   currentRoundBet: number = 0;
 
-  constructor(stackSize: number) {
+  constructor(player1: Player, player2: Player) {
     this.deck = new Deck();
-    this.player1 = new Player(stackSize);
-    this.player2 = new Player(stackSize);
+    this.player1 = player1;
+    this.player2 = player2;
     this.currentPlayer = this.player1;
   }
 
@@ -77,9 +77,13 @@ export class Game {
   }
 
   playerAction(
+    player: Player,
     action: "bet" | "call" | "check" | "fold" | "raise",
     amount?: number
   ): void {
+    if (player !== this.currentPlayer) {
+      throw new Error("Invalid player trying to perform an action!");
+    }
     switch (action) {
       case "bet":
         this.currentPlayer.bet(amount!);

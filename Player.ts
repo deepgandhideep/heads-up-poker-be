@@ -1,11 +1,12 @@
 import Card from "./Card";
 
 export default class Player {
+  name: string = "";
   hand: Card[] = [];
   stack: number;
   currentBet: number = 0;
 
-  constructor(initialStack: number) {
+  constructor(initialStack: number, name: string) {
     this.stack = initialStack;
   }
 

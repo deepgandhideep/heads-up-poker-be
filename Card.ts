@@ -18,6 +18,6 @@ export default class Card {
   constructor(public suit: Suit, public value: Value) {}
 
   toString(): string {
-    return `${this.value}${this.suit.charAt(0)}`;
+    return `${this.value}${this.suit.charAt(0).toLowerCase()}`;
   }
 }

@@ -1,8 +1,9 @@
 const express = require("express");
 const { createServer } = require("http");
 const socketIoLib = require("socket.io");
-const Player = require("./player_v1");
+const Player = require("./Player");
 const TexasHoldem = require("./texasholdem_v1");
+const Game = require("./Game");
 const { join } = require("path");
 
 const app = express();
@@ -19,19 +20,7 @@ app.get("/dealer", (req, res) => {
 
 let players = {};
 let texasHoldem = {};
-
-function bet(betAmount, socket) {
-  if (gameState.players[socket.id].stack >= betAmount) {
-    gameState.players[socket.id].stack -= betAmount;
-    gameState.players[socket.id].bet = betAmount;
-    gameState.pot += betAmount;
-    gameState.turn = Object.keys(gameState.players).find(
-      (id) => id !== socket.id
-    );
-  } else {
-    socket.emit("message", "Insufficient chips to bet that amount.");
-  }
-}
+let game = {};
 
 io.on("connection", (socket) => {
   console.log("A user connected: " + socket.id);
@@ -40,7 +29,7 @@ io.on("connection", (socket) => {
     if (Object.keys(players).length < 2) {
       let id = socket.id;
       console.log("id " + id);
-      players[id] = new Player(playerName);
+      players[id] = new Player(1000, playerName);
       console.log("pl " + JSON.stringify(players));
       io.emit("message", `${playerName} has joined the game.`);
     } else {
@@ -52,23 +41,18 @@ io.on("connection", (socket) => {
     const playerId = socket.id;
     const player = players[playerId];
 
-    texasHoldem.bettingRound(player, action);
+    game.playerAction(player, action.action, action.amount);
 
-    io.emit("gameState", texasHoldem.gameState);
+    //  io.emit("gameState", texasHoldem.gameState);
   });
-
-  function getOpponentId(currentPlayerId) {
-    return Object.keys(gameState.players).find((id) => id !== currentPlayerId);
-  }
 
   socket.on("startGame", () => {
     console.log("sg");
 
-
     if (Object.values(players).length === 2) {
-      texasHoldem = new TexasHoldem(Object.values(players)[0], Object.values(players)[1]);
-      texasHoldem.playGame();
-      io.emit("gameState", texasHoldem.gameState);
+      game = new Game(Object.values(players)[0], Object.values(players)[1]);
+      game.dealInitialCards();
+      //    io.emit("gameState", texasHoldem.gameState);
       io.emit("message", "The game has started!");
     } else {
       socket.emit("message", "Need two players to start the game.");
@@ -77,22 +61,21 @@ io.on("connection", (socket) => {
 
   socket.on("showdown", () => {
     console.log("showdown");
-    texasHoldem.showDown();
-    console.log("postwin state " + JSON.stringify(texasHoldem.gameState));
-    io.emit("gameState", texasHoldem.gameState);
+    game.evaluateHands();
+    // console.log("postwin state " + JSON.stringify(texasHoldem.gameState));
+    //  io.emit("gameState", texasHoldem.gameState);
   });
 
   socket.on("dealerAction", () => {
-    if (texasHoldem.getGameState().community_cards.length == 0)
-      texasHoldem.dealFlop();
-    else texasHoldem.dealTurnOrRiver();
-    io.emit("gameState", texasHoldem.gameState);
+    if (game.communityCards.length == 0) game.dealFlop();
+    else game.dealTurnOrRiver();
+    //io.emit("gameState", texasHoldem.gameState);
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected: " + socket.id);
     //delete gameState.players[socket.id];
-    io.emit("gameState", texasHoldem.gameState);
+    // io.emit("gameState", texasHoldem.gameState);
     io.emit("message", "A player has left the game.");
   });
 });
