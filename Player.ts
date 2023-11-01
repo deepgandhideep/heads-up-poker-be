@@ -1,6 +1,6 @@
-import { Card } from "./Card";
+import Card from "./Card";
 
-export class Player {
+export default class Player {
   hand: Card[] = [];
   stack: number;
   currentBet: number = 0;

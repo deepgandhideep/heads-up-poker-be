@@ -14,7 +14,7 @@ export type Value =
   | "K"
   | "A";
 
-export class Card {
+export default class Card {
   constructor(public suit: Suit, public value: Value) {}
 
   toString(): string {

@@ -1,12 +1,12 @@
-import * as PokerSolver from "pokersolver";
-import { Card } from "./Card";
-import { Deck } from "./Deck";
-import { Player } from "./Player";
+const PokerSolver: any = require("pokersolver");
+import Card from "./Card";
+import Deck from "./Deck";
+import Player from "./Player";
 
 export class Game {
-  deck: Deck;
-  player1: Player;
-  player2: Player;
+  deck!: Deck;
+  player1!: Player;
+  player2!: Player;
   communityCards: Card[] = [];
   pot: number = 0;
   currentPlayer: Player;
