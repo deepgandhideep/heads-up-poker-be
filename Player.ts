@@ -24,6 +24,7 @@ export default class Player {
       this.currentBet = amount;
       this.stack -= amount;
     }
+    console.log(this.name + " bets " + amount);
   }
 
   raise(amount: number): void {
@@ -37,6 +38,7 @@ export default class Player {
       this.stack -= amount;
       this.currentBet = totalBet;
     }
+    console.log(this.name + " raises to " + amount);
   }
 
   call(currentRoundBet: number): void {
@@ -47,20 +49,27 @@ export default class Player {
       this.currentBet += amountToCall;
       this.stack -= amountToCall;
     }
+    console.log(this.name + " calls " + currentRoundBet);
   }
 
   check(currentRoundBet: number): void {
     if (this.currentBet < currentRoundBet) {
       throw new Error("Cannot check: there is a bet in the current round.");
     }
+    console.log(this.name + " checks ");
   }
 
   allIn(): void {
     this.currentBet += this.stack;
     this.stack = 0;
+    console.log(this.name + " goes all in");
   }
 
   fold(): void {
     this.hand = [];
+    console.log(this.name + " folds");
+  }
+  credit(amount: number): void {
+    this.stack += amount;
   }
 }

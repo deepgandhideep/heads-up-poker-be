@@ -26,6 +26,8 @@ export class Game {
     this.player2.takeCard(this.deck.draw()!);
     this.player2.takeCard(this.deck.draw()!);
     this.currentRoundBet = 0;
+    console.log("Player1 hands " + JSON.stringify(this.player1.hand));
+    console.log("Player2 hands " + JSON.stringify(this.player2.hand));
   }
 
   dealFlop(): void {
@@ -34,15 +36,17 @@ export class Game {
     }
     this.collectBets();
     this.currentRoundBet = 0;
+    console.log("Community cards " + this.communityCards);
   }
 
   dealTurnOrRiver(): void {
     this.communityCards.push(this.deck.draw()!);
     this.collectBets();
     this.currentRoundBet = 0;
+    console.log("Community cards " + this.communityCards);
   }
 
-  evaluateHands(): string {
+  evaluateHands() {
     const hand1 = PokerSolver.Hand.solve(
       [...this.player1.hand, ...this.communityCards].map((card) =>
         card.toString()
@@ -57,12 +61,18 @@ export class Game {
     const winner = PokerSolver.Hand.winners([hand1, hand2])[0];
 
     if (winner === hand1) {
-      return "Player 1 wins!";
+      this.player1.credit(this.pot);
+      this.pot = 0;
     } else if (winner === hand2) {
-      return "Player 2 wins!";
+      this.player2.credit(this.pot);
+      this.pot = 0;
     } else {
-      return "It's a tie!";
+      this.player1.credit(this.pot / 2);
+      this.player2.credit(this.pot / 2);
+      this.pot = 0;
     }
+    console.log("Player1 " + JSON.stringify(this.player1));
+    console.log("Player2 " + JSON.stringify(this.player2));
   }
 
   switchPlayer(): void {
@@ -102,6 +112,7 @@ export class Game {
         break;
       case "fold":
         this.currentPlayer.fold();
+        this.evaluateHands();
         return;
     }
     this.switchPlayer();
@@ -111,5 +122,8 @@ export class Game {
       this.collectBets();
       this.currentRoundBet = 0;
     }
+    console.log("pot " + this.pot);
+    console.log("Player1 " + JSON.stringify(this.player1));
+    console.log("Player2 " + JSON.stringify(this.player2));
   }
 }
