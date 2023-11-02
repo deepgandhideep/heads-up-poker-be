@@ -2,16 +2,17 @@ import Card from "./Card";
 
 export default class Player {
   name: string = "";
-  hand: Card[] = [];
+  hand: string[] = [];
   stack: number;
   currentBet: number = 0;
 
   constructor(initialStack: number, name: string) {
+    this.name = name;
     this.stack = initialStack;
   }
 
   takeCard(card: Card): void {
-    this.hand.push(card);
+    this.hand.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
   }
 
   bet(amount: number): void {

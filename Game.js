@@ -1,40 +1,18 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Game = void 0;
-const PokerSolver = __importStar(require("pokersolver"));
-const Deck_1 = require("./Deck");
-const Player_1 = require("./Player");
+const PokerSolver = require("pokersolver");
+const Deck_1 = __importDefault(require("./Deck"));
 class Game {
-    constructor(stackSize) {
+    constructor(player1, player2) {
         this.communityCards = [];
         this.pot = 0;
         this.currentRoundBet = 0;
-        this.deck = new Deck_1.Deck();
-        this.player1 = new Player_1.Player(stackSize);
-        this.player2 = new Player_1.Player(stackSize);
+        this.deck = new Deck_1.default();
+        this.player1 = player1;
+        this.player2 = player2;
         this.currentPlayer = this.player1;
     }
     dealInitialCards() {
@@ -44,32 +22,47 @@ class Game {
         this.player2.takeCard(this.deck.draw());
         this.player2.takeCard(this.deck.draw());
         this.currentRoundBet = 0;
+        console.log("Player1 hands " + JSON.stringify(this.player1.hand));
+        console.log("Player2 hands " + JSON.stringify(this.player2.hand));
     }
     dealFlop() {
         for (let i = 0; i < 3; i++) {
-            this.communityCards.push(this.deck.draw());
+            const card = this.deck.draw();
+            this.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
         }
         this.collectBets();
         this.currentRoundBet = 0;
+        console.log("Community cards " + this.communityCards);
     }
     dealTurnOrRiver() {
-        this.communityCards.push(this.deck.draw());
+        const card = this.deck.draw();
+        this.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
         this.collectBets();
         this.currentRoundBet = 0;
+        console.log("Community cards " + this.communityCards);
     }
     evaluateHands() {
         const hand1 = PokerSolver.Hand.solve([...this.player1.hand, ...this.communityCards].map((card) => card.toString()));
         const hand2 = PokerSolver.Hand.solve([...this.player2.hand, ...this.communityCards].map((card) => card.toString()));
         const winner = PokerSolver.Hand.winners([hand1, hand2])[0];
         if (winner === hand1) {
-            return "Player 1 wins!";
+            console.log("Winner " + this.player1.name + " - " + winner.descr);
+            this.player1.credit(this.pot);
+            this.pot = 0;
         }
         else if (winner === hand2) {
-            return "Player 2 wins!";
+            console.log("Winner " + this.player2.name + " - " + winner.descr);
+            this.player2.credit(this.pot);
+            this.pot = 0;
         }
         else {
-            return "It's a tie!";
+            console.log("Winner - Its a tie");
+            this.player1.credit(this.pot / 2);
+            this.player2.credit(this.pot / 2);
+            this.pot = 0;
         }
+        console.log("Player1 " + JSON.stringify(this.player1));
+        console.log("Player2 " + JSON.stringify(this.player2));
     }
     switchPlayer() {
         this.currentPlayer =
@@ -80,7 +73,10 @@ class Game {
         this.player1.currentBet = 0;
         this.player2.currentBet = 0;
     }
-    playerAction(action, amount) {
+    playerAction(player, action, amount) {
+        if (player !== this.currentPlayer) {
+            throw new Error("Invalid player trying to perform an action!");
+        }
         switch (action) {
             case "bet":
                 this.currentPlayer.bet(amount);
@@ -99,6 +95,7 @@ class Game {
                 break;
             case "fold":
                 this.currentPlayer.fold();
+                this.evaluateHands();
                 return;
         }
         this.switchPlayer();
@@ -107,6 +104,9 @@ class Game {
             this.collectBets();
             this.currentRoundBet = 0;
         }
+        console.log("pot " + this.pot);
+        console.log("Player1 " + JSON.stringify(this.player1));
+        console.log("Player2 " + JSON.stringify(this.player2));
     }
 }
-exports.Game = Game;
+exports.default = Game;

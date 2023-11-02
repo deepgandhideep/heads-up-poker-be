@@ -1,9 +1,8 @@
 const express = require("express");
 const { createServer } = require("http");
 const socketIoLib = require("socket.io");
-const Player = require("./Player");
-const TexasHoldem = require("./texasholdem_v1");
-const Game = require("./Game");
+const Player = require("./Player").default;
+const Game = require("./Game").default;
 const { join } = require("path");
 
 const app = express();
@@ -40,7 +39,7 @@ io.on("connection", (socket) => {
   socket.on("playerAction", (action) => {
     const playerId = socket.id;
     const player = players[playerId];
-
+    console.log("playerAction " + action);
     game.playerAction(player, action.action, action.amount);
 
     //  io.emit("gameState", texasHoldem.gameState);

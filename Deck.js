@@ -1,7 +1,9 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Deck = void 0;
-const Card_1 = require("./Card");
+const Card_1 = __importDefault(require("./Card"));
 class Deck {
     constructor() {
         this.cards = [];
@@ -23,7 +25,7 @@ class Deck {
         ];
         for (let suit of suits) {
             for (let value of values) {
-                this.cards.push(new Card_1.Card(suit, value));
+                this.cards.push(new Card_1.default(suit, value));
             }
         }
     }
@@ -37,4 +39,4 @@ class Deck {
         return this.cards.pop();
     }
 }
-exports.Deck = Deck;
+exports.default = Deck;

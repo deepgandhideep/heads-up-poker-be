@@ -3,11 +3,11 @@ import Card from "./Card";
 import Deck from "./Deck";
 import Player from "./Player";
 
-export class Game {
+export default class Game {
   deck!: Deck;
   player1!: Player;
   player2!: Player;
-  communityCards: Card[] = [];
+  communityCards: string[] = [];
   pot: number = 0;
   currentPlayer: Player;
   currentRoundBet: number = 0;
@@ -26,13 +26,20 @@ export class Game {
     this.player2.takeCard(this.deck.draw()!);
     this.player2.takeCard(this.deck.draw()!);
     this.currentRoundBet = 0;
-    console.log("Player1 hands " + JSON.stringify(this.player1.hand));
-    console.log("Player2 hands " + JSON.stringify(this.player2.hand));
+    console.log(
+      this.player1.name + " hands " + JSON.stringify(this.player1.hand)
+    );
+    console.log(
+      this.player2.name + " hands " + JSON.stringify(this.player2.hand)
+    );
   }
 
   dealFlop(): void {
     for (let i = 0; i < 3; i++) {
-      this.communityCards.push(this.deck.draw()!);
+      const card: Card = this.deck.draw()!;
+      this.communityCards.push(
+        card.value + card.suit.charAt(0).toLocaleLowerCase()
+      );
     }
     this.collectBets();
     this.currentRoundBet = 0;
@@ -40,7 +47,10 @@ export class Game {
   }
 
   dealTurnOrRiver(): void {
-    this.communityCards.push(this.deck.draw()!);
+    const card: Card = this.deck.draw()!;
+    this.communityCards.push(
+      card.value + card.suit.charAt(0).toLocaleLowerCase()
+    );
     this.collectBets();
     this.currentRoundBet = 0;
     console.log("Community cards " + this.communityCards);
@@ -61,12 +71,15 @@ export class Game {
     const winner = PokerSolver.Hand.winners([hand1, hand2])[0];
 
     if (winner === hand1) {
+      console.log("Winner " + this.player1.name + " - " + winner.descr);
       this.player1.credit(this.pot);
       this.pot = 0;
     } else if (winner === hand2) {
+      console.log("Winner " + this.player2.name + " - " + winner.descr);
       this.player2.credit(this.pot);
       this.pot = 0;
     } else {
+      console.log("Winner - Its a tie");
       this.player1.credit(this.pot / 2);
       this.player2.credit(this.pot / 2);
       this.pot = 0;

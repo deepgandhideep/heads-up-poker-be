@@ -1,14 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Player = void 0;
 class Player {
-    constructor(initialStack) {
+    constructor(initialStack, name) {
+        this.name = "";
         this.hand = [];
         this.currentBet = 0;
+        this.name = name;
         this.stack = initialStack;
     }
     takeCard(card) {
-        this.hand.push(card);
+        this.hand.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
     }
     bet(amount) {
         if (amount <= 0) {
@@ -21,6 +22,7 @@ class Player {
             this.currentBet = amount;
             this.stack -= amount;
         }
+        console.log(this.name + " bets " + amount);
     }
     raise(amount) {
         if (amount <= 0) {
@@ -34,6 +36,7 @@ class Player {
             this.stack -= amount;
             this.currentBet = totalBet;
         }
+        console.log(this.name + " raises to " + amount);
     }
     call(currentRoundBet) {
         const amountToCall = currentRoundBet - this.currentBet;
@@ -44,18 +47,25 @@ class Player {
             this.currentBet += amountToCall;
             this.stack -= amountToCall;
         }
+        console.log(this.name + " calls " + currentRoundBet);
     }
     check(currentRoundBet) {
         if (this.currentBet < currentRoundBet) {
             throw new Error("Cannot check: there is a bet in the current round.");
         }
+        console.log(this.name + " checks ");
     }
     allIn() {
         this.currentBet += this.stack;
         this.stack = 0;
+        console.log(this.name + " goes all in");
     }
     fold() {
         this.hand = [];
+        console.log(this.name + " folds");
+    }
+    credit(amount) {
+        this.stack += amount;
     }
 }
-exports.Player = Player;
+exports.default = Player;
