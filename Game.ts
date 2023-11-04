@@ -19,6 +19,16 @@ export default class Game {
     this.currentPlayer = this.player1;
   }
 
+  newGame(): void {
+    this.communityCards = [];
+    this.pot = 0;
+    this.currentRoundBet = 0;
+    this.player1.clearHand();
+    this.player2.clearHand();
+    this.deck.shuffle();
+    console.log("New game started. Deck shuffled and player hands cleared.");
+  }
+
   dealInitialCards(): void {
     this.deck.shuffle();
     this.player1.takeCard(this.deck.draw()!);
@@ -94,7 +104,13 @@ export default class Game {
   }
 
   collectBets(): void {
-    this.pot += this.player1.currentBet + this.player2.currentBet;
+    console.log(
+      "collectBets Pl1 " +
+        this.player1.currentBet +
+        " PL2 " +
+        this.player2.currentBet
+    );
+    this.pot += +this.player1.currentBet + +this.player2.currentBet;
     this.player1.currentBet = 0;
     this.player2.currentBet = 0;
   }
@@ -130,8 +146,16 @@ export default class Game {
     }
     this.switchPlayer();
 
+    console.log(
+      "actionBets Pl1 " +
+        this.player1.currentBet +
+        " PL2 " +
+        this.player2.currentBet
+    );
+
     // If both players' current bets are equal, collect bets
-    if (this.player1.currentBet === this.player2.currentBet) {
+    if (this.player1.currentBet == this.player2.currentBet) {
+      console.log("Conditions passed");
       this.collectBets();
       this.currentRoundBet = 0;
     }

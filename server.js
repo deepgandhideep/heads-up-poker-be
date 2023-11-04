@@ -65,6 +65,13 @@ io.on("connection", (socket) => {
     //  io.emit("gameState", texasHoldem.gameState);
   });
 
+  socket.on("newGame", () => {
+    console.log("newGame");
+    game.newGame();
+    // console.log("postwin state " + JSON.stringify(texasHoldem.gameState));
+    //  io.emit("gameState", texasHoldem.gameState);
+  });
+
   socket.on("dealerAction", () => {
     if (game.communityCards.length == 0) game.dealFlop();
     else game.dealTurnOrRiver();

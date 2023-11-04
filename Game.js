@@ -22,8 +22,8 @@ class Game {
         this.player2.takeCard(this.deck.draw());
         this.player2.takeCard(this.deck.draw());
         this.currentRoundBet = 0;
-        console.log("Player1 hands " + JSON.stringify(this.player1.hand));
-        console.log("Player2 hands " + JSON.stringify(this.player2.hand));
+        console.log(this.player1.name + " hands " + JSON.stringify(this.player1.hand));
+        console.log(this.player2.name + " hands " + JSON.stringify(this.player2.hand));
     }
     dealFlop() {
         for (let i = 0; i < 3; i++) {
@@ -69,7 +69,11 @@ class Game {
             this.currentPlayer === this.player1 ? this.player2 : this.player1;
     }
     collectBets() {
-        this.pot += this.player1.currentBet + this.player2.currentBet;
+        console.log("collectBets Pl1 " +
+            this.player1.currentBet +
+            " PL2 " +
+            this.player2.currentBet);
+        this.pot += +this.player1.currentBet + +this.player2.currentBet;
         this.player1.currentBet = 0;
         this.player2.currentBet = 0;
     }
@@ -99,8 +103,13 @@ class Game {
                 return;
         }
         this.switchPlayer();
+        console.log("actionBets Pl1 " +
+            this.player1.currentBet +
+            " PL2 " +
+            this.player2.currentBet);
         // If both players' current bets are equal, collect bets
-        if (this.player1.currentBet === this.player2.currentBet) {
+        if (this.player1.currentBet == this.player2.currentBet) {
+            console.log("Conditions passed");
             this.collectBets();
             this.currentRoundBet = 0;
         }

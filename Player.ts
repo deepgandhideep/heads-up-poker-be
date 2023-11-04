@@ -11,6 +11,11 @@ export default class Player {
     this.stack = initialStack;
   }
 
+  clearHand(): void {
+    this.hand = [];
+    this.currentBet = 0;
+  }
+
   takeCard(card: Card): void {
     this.hand.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
   }

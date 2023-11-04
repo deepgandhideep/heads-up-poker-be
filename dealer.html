@@ -53,6 +53,7 @@
       <button id="startGame">Start Game</button>
       <button id="nextStage">Next Stage</button>
       <button id="showWinner">Show Winner</button>
+      <button id="newGame">New Game</button>
     </div>
 
     <script>
@@ -95,6 +96,10 @@
 
       document.getElementById("showWinner").addEventListener("click", () => {
         socket.emit("showdown", { action: "showWinner" });
+      });
+      document.getElementById("newGame").addEventListener("click", () => {
+        console.log("Dealer starts a new game");
+        socket.emit("newGame"); // Emit the newGame event
       });
     </script>
     <script>
