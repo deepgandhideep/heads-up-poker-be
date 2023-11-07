@@ -5,6 +5,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const PokerSolver = require("pokersolver");
 const Deck_1 = __importDefault(require("./Deck"));
+var GameStage;
+(function (GameStage) {
+    GameStage["PreFlop"] = "pre-flop";
+    GameStage["Flop"] = "flop";
+    GameStage["Turn"] = "turn";
+    GameStage["River"] = "river";
+    GameStage["ShowDown"] = "show-down";
+})(GameStage || (GameStage = {}));
 class Game {
     constructor(player1, player2) {
         this.gameState = {
@@ -17,6 +25,7 @@ class Game {
             currentRoundBet: 0,
             winner: null,
             winDesc: "",
+            gameStage: GameStage.PreFlop,
         };
     }
     newGame() {
@@ -45,6 +54,10 @@ class Game {
             JSON.stringify(this.gameState.player2.hand));
     }
     dealFlop() {
+        if (this.gameState.currentRoundBet != 0) {
+            console.log("Cant deal yet");
+            return;
+        }
         for (let i = 0; i < 3; i++) {
             const card = this.gameState.deck.draw();
             this.gameState.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
@@ -52,13 +65,22 @@ class Game {
         this.collectBets();
         this.gameState.currentRoundBet = 0;
         console.log("Community cards " + this.gameState.communityCards);
+        this.gameState.gameStage = GameStage.Flop;
     }
     dealTurnOrRiver() {
+        if (this.gameState.currentRoundBet != 0) {
+            console.log("Cant deal yet");
+            return;
+        }
         const card = this.gameState.deck.draw();
         this.gameState.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
         this.collectBets();
         this.gameState.currentRoundBet = 0;
         console.log("Community cards " + this.gameState.communityCards);
+        if (this.gameState.gameStage == GameStage.Flop)
+            this.gameState.gameStage = GameStage.Turn;
+        else if (this.gameState.gameStage == GameStage.Turn)
+            this.gameState.gameStage = GameStage.River;
     }
     evaluateHands() {
         const hand1 = PokerSolver.Hand.solve([...this.gameState.player1.hand, ...this.gameState.communityCards].map((card) => card.toString()));
@@ -142,6 +164,8 @@ class Game {
             console.log("Conditions passed");
             this.collectBets();
             this.gameState.currentRoundBet = 0;
+            if (this.gameState.gameStage == GameStage.River)
+                this.gameState.gameStage = GameStage.ShowDown;
         }
         console.log("pot " + this.gameState.pot);
         console.log("Player1 " + JSON.stringify(this.gameState.player1));

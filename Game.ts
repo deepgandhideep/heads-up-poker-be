@@ -4,6 +4,13 @@ import Deck from "./Deck";
 import Player from "./Player";
 
 type Nullable<T> = T | null;
+enum GameStage {
+  PreFlop = "pre-flop",
+  Flop = "flop",
+  Turn = "turn",
+  River = "river",
+  ShowDown = "show-down",
+}
 
 export default class Game {
   private gameState: {
@@ -16,6 +23,7 @@ export default class Game {
     currentRoundBet: number;
     winner: Nullable<Player>;
     winDesc: string;
+    gameStage: string;
   };
 
   constructor(player1: Player, player2: Player) {
@@ -29,6 +37,7 @@ export default class Game {
       currentRoundBet: 0,
       winner: null,
       winDesc: "",
+      gameStage: GameStage.PreFlop,
     };
   }
 
@@ -64,6 +73,10 @@ export default class Game {
   }
 
   dealFlop(): void {
+    if (this.gameState.currentRoundBet != 0) {
+      console.log("Cant deal yet");
+      return;
+    }
     for (let i = 0; i < 3; i++) {
       const card: Card = this.gameState.deck.draw()!;
       this.gameState.communityCards.push(
@@ -73,9 +86,14 @@ export default class Game {
     this.collectBets();
     this.gameState.currentRoundBet = 0;
     console.log("Community cards " + this.gameState.communityCards);
+    this.gameState.gameStage = GameStage.Flop;
   }
 
   dealTurnOrRiver(): void {
+    if (this.gameState.currentRoundBet != 0) {
+      console.log("Cant deal yet");
+      return;
+    }
     const card: Card = this.gameState.deck.draw()!;
     this.gameState.communityCards.push(
       card.value + card.suit.charAt(0).toLocaleLowerCase()
@@ -83,6 +101,10 @@ export default class Game {
     this.collectBets();
     this.gameState.currentRoundBet = 0;
     console.log("Community cards " + this.gameState.communityCards);
+    if (this.gameState.gameStage == GameStage.Flop)
+      this.gameState.gameStage = GameStage.Turn;
+    else if (this.gameState.gameStage == GameStage.Turn)
+      this.gameState.gameStage = GameStage.River;
   }
 
   evaluateHands() {
@@ -195,6 +217,8 @@ export default class Game {
       console.log("Conditions passed");
       this.collectBets();
       this.gameState.currentRoundBet = 0;
+      if (this.gameState.gameStage == GameStage.River)
+        this.gameState.gameStage = GameStage.ShowDown;
     }
     console.log("pot " + this.gameState.pot);
     console.log("Player1 " + JSON.stringify(this.gameState.player1));
