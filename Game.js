@@ -7,115 +7,145 @@ const PokerSolver = require("pokersolver");
 const Deck_1 = __importDefault(require("./Deck"));
 class Game {
     constructor(player1, player2) {
-        this.communityCards = [];
-        this.pot = 0;
-        this.currentRoundBet = 0;
-        this.deck = new Deck_1.default();
-        this.player1 = player1;
-        this.player2 = player2;
-        this.currentPlayer = this.player1;
+        this.gameState = {
+            deck: new Deck_1.default(),
+            player1: player1,
+            player2: player2,
+            communityCards: [],
+            pot: 0,
+            currentPlayer: player1,
+            currentRoundBet: 0,
+            winner: null,
+            winDesc: "",
+        };
+    }
+    newGame() {
+        this.gameState.communityCards = [];
+        this.gameState.pot = 0;
+        this.gameState.currentRoundBet = 0;
+        this.gameState.player1.clearHand();
+        this.gameState.player2.clearHand();
+        this.gameState.deck.shuffle();
+        this.gameState.winner = null;
+        this.gameState.winDesc = "";
+        console.log("New game started. Deck shuffled and player hands cleared.");
     }
     dealInitialCards() {
-        this.deck.shuffle();
-        this.player1.takeCard(this.deck.draw());
-        this.player1.takeCard(this.deck.draw());
-        this.player2.takeCard(this.deck.draw());
-        this.player2.takeCard(this.deck.draw());
-        this.currentRoundBet = 0;
-        console.log(this.player1.name + " hands " + JSON.stringify(this.player1.hand));
-        console.log(this.player2.name + " hands " + JSON.stringify(this.player2.hand));
+        this.gameState.deck.shuffle();
+        this.gameState.player1.takeCard(this.gameState.deck.draw());
+        this.gameState.player1.takeCard(this.gameState.deck.draw());
+        this.gameState.player2.takeCard(this.gameState.deck.draw());
+        this.gameState.player2.takeCard(this.gameState.deck.draw());
+        this.gameState.currentRoundBet = 0;
+        console.log(this.gameState.player1.name +
+            " hands " +
+            JSON.stringify(this.gameState.player1.hand));
+        console.log(this.gameState.player2.name +
+            " hands " +
+            JSON.stringify(this.gameState.player2.hand));
     }
     dealFlop() {
         for (let i = 0; i < 3; i++) {
-            const card = this.deck.draw();
-            this.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
+            const card = this.gameState.deck.draw();
+            this.gameState.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
         }
         this.collectBets();
-        this.currentRoundBet = 0;
-        console.log("Community cards " + this.communityCards);
+        this.gameState.currentRoundBet = 0;
+        console.log("Community cards " + this.gameState.communityCards);
     }
     dealTurnOrRiver() {
-        const card = this.deck.draw();
-        this.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
+        const card = this.gameState.deck.draw();
+        this.gameState.communityCards.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
         this.collectBets();
-        this.currentRoundBet = 0;
-        console.log("Community cards " + this.communityCards);
+        this.gameState.currentRoundBet = 0;
+        console.log("Community cards " + this.gameState.communityCards);
     }
     evaluateHands() {
-        const hand1 = PokerSolver.Hand.solve([...this.player1.hand, ...this.communityCards].map((card) => card.toString()));
-        const hand2 = PokerSolver.Hand.solve([...this.player2.hand, ...this.communityCards].map((card) => card.toString()));
+        const hand1 = PokerSolver.Hand.solve([...this.gameState.player1.hand, ...this.gameState.communityCards].map((card) => card.toString()));
+        const hand2 = PokerSolver.Hand.solve([...this.gameState.player2.hand, ...this.gameState.communityCards].map((card) => card.toString()));
         const winner = PokerSolver.Hand.winners([hand1, hand2])[0];
         if (winner === hand1) {
-            console.log("Winner " + this.player1.name + " - " + winner.descr);
-            this.player1.credit(this.pot);
-            this.pot = 0;
+            console.log("Winner " + this.gameState.player1.name + " - " + winner.descr);
+            this.gameState.player1.credit(this.gameState.pot);
+            this.gameState.pot = 0;
+            this.gameState.winner = this.gameState.player1;
+            this.gameState.winDesc = winner.descr;
         }
         else if (winner === hand2) {
-            console.log("Winner " + this.player2.name + " - " + winner.descr);
-            this.player2.credit(this.pot);
-            this.pot = 0;
+            console.log("Winner " + this.gameState.player2.name + " - " + winner.descr);
+            this.gameState.winner = this.gameState.player2;
+            this.gameState.winDesc = winner.descr;
+            this.gameState.player2.credit(this.gameState.pot);
+            this.gameState.pot = 0;
         }
         else {
-            console.log("Winner - Its a tie");
-            this.player1.credit(this.pot / 2);
-            this.player2.credit(this.pot / 2);
-            this.pot = 0;
+            console.log("Winner - It's a tie");
+            this.gameState.player1.credit(this.gameState.pot / 2);
+            this.gameState.player2.credit(this.gameState.pot / 2);
+            this.gameState.pot = 0;
         }
-        console.log("Player1 " + JSON.stringify(this.player1));
-        console.log("Player2 " + JSON.stringify(this.player2));
+        console.log("Player1 " + JSON.stringify(this.gameState.player1));
+        console.log("Player2 " + JSON.stringify(this.gameState.player2));
     }
     switchPlayer() {
-        this.currentPlayer =
-            this.currentPlayer === this.player1 ? this.player2 : this.player1;
+        this.gameState.currentPlayer =
+            this.gameState.currentPlayer === this.gameState.player1
+                ? this.gameState.player2
+                : this.gameState.player1;
     }
     collectBets() {
         console.log("collectBets Pl1 " +
-            this.player1.currentBet +
+            this.gameState.player1.currentBet +
             " PL2 " +
-            this.player2.currentBet);
-        this.pot += +this.player1.currentBet + +this.player2.currentBet;
-        this.player1.currentBet = 0;
-        this.player2.currentBet = 0;
+            this.gameState.player2.currentBet);
+        this.gameState.pot +=
+            +this.gameState.player1.currentBet + +this.gameState.player2.currentBet;
+        this.gameState.player1.currentBet = 0;
+        this.gameState.player2.currentBet = 0;
     }
     playerAction(player, action, amount) {
-        if (player !== this.currentPlayer) {
-            throw new Error("Invalid player trying to perform an action!");
+        if (player !== this.gameState.currentPlayer) {
+            console.log("Invalid player trying to perform an action!");
+            //throw new Error();
         }
         switch (action) {
             case "bet":
-                this.currentPlayer.bet(amount);
-                this.currentRoundBet = this.currentPlayer.currentBet;
+                this.gameState.currentPlayer.bet(amount);
+                this.gameState.currentRoundBet =
+                    this.gameState.currentPlayer.currentBet;
                 break;
             case "raise":
-                this.currentPlayer.raise(amount);
-                this.currentRoundBet = this.currentPlayer.currentBet;
+                this.gameState.currentPlayer.raise(amount);
+                this.gameState.currentRoundBet =
+                    this.gameState.currentPlayer.currentBet;
                 break;
             case "call":
-                const callAmount = this.currentRoundBet - this.currentPlayer.currentBet;
-                this.currentPlayer.call(callAmount);
+                const callAmount = this.gameState.currentRoundBet -
+                    this.gameState.currentPlayer.currentBet;
+                this.gameState.currentPlayer.call(callAmount);
                 break;
             case "check":
-                this.currentPlayer.check(this.currentRoundBet);
+                this.gameState.currentPlayer.check(this.gameState.currentRoundBet);
                 break;
             case "fold":
-                this.currentPlayer.fold();
+                this.gameState.currentPlayer.fold();
                 this.evaluateHands();
                 return;
         }
         this.switchPlayer();
-        console.log("actionBets Pl1 " +
-            this.player1.currentBet +
+        console.log("actionBets PL1 " +
+            this.gameState.player1.currentBet +
             " PL2 " +
-            this.player2.currentBet);
+            this.gameState.player2.currentBet);
         // If both players' current bets are equal, collect bets
-        if (this.player1.currentBet == this.player2.currentBet) {
+        if (this.gameState.player1.currentBet == this.gameState.player2.currentBet) {
             console.log("Conditions passed");
             this.collectBets();
-            this.currentRoundBet = 0;
+            this.gameState.currentRoundBet = 0;
         }
-        console.log("pot " + this.pot);
-        console.log("Player1 " + JSON.stringify(this.player1));
-        console.log("Player2 " + JSON.stringify(this.player2));
+        console.log("pot " + this.gameState.pot);
+        console.log("Player1 " + JSON.stringify(this.gameState.player1));
+        console.log("Player2 " + JSON.stringify(this.gameState.player2));
     }
 }
 exports.default = Game;

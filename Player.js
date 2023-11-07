@@ -8,6 +8,10 @@ class Player {
         this.name = name;
         this.stack = initialStack;
     }
+    clearHand() {
+        this.hand = [];
+        this.currentBet = 0;
+    }
     takeCard(card) {
         this.hand.push(card.value + card.suit.charAt(0).toLocaleLowerCase());
     }

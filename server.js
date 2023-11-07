@@ -18,7 +18,6 @@ app.get("/dealer", (req, res) => {
 });
 
 let players = {};
-let texasHoldem = {};
 let game = {};
 
 io.on("connection", (socket) => {
@@ -41,8 +40,9 @@ io.on("connection", (socket) => {
     const player = players[playerId];
     console.log("playerAction " + action);
     game.playerAction(player, action.action, action.amount);
-
-    //  io.emit("gameState", texasHoldem.gameState);
+    let gameState = game.gameState;
+    gameState["players"] = players;
+    io.emit("gameState", game.gameState);
   });
 
   socket.on("startGame", () => {
@@ -51,37 +51,53 @@ io.on("connection", (socket) => {
     if (Object.values(players).length === 2) {
       game = new Game(Object.values(players)[0], Object.values(players)[1]);
       game.dealInitialCards();
-      //    io.emit("gameState", texasHoldem.gameState);
+      let gameState = game.gameState;
+      gameState["players"] = players;
       io.emit("message", "The game has started!");
     } else {
       socket.emit("message", "Need two players to start the game.");
     }
+    let gameState = game.gameState;
+    gameState["players"] = players;
+    io.emit("gameState", game.gameState);
   });
 
   socket.on("showdown", () => {
     console.log("showdown");
     game.evaluateHands();
-    // console.log("postwin state " + JSON.stringify(texasHoldem.gameState));
-    //  io.emit("gameState", texasHoldem.gameState);
+    let gameState = game.gameState;
+    gameState["players"] = players;
+    io.emit("gameState", game.gameState);
   });
 
   socket.on("newGame", () => {
     console.log("newGame");
     game.newGame();
-    // console.log("postwin state " + JSON.stringify(texasHoldem.gameState));
-    //  io.emit("gameState", texasHoldem.gameState);
+    let gameState = game.gameState;
+    gameState["players"] = players;
+    io.emit("gameState", game.gameState);
   });
 
   socket.on("dealerAction", () => {
-    if (game.communityCards.length == 0) game.dealFlop();
-    else game.dealTurnOrRiver();
-    //io.emit("gameState", texasHoldem.gameState);
+    console.log("dealerAction " + JSON.stringify(game.gameState));
+    if (
+      game.gameState.communityCards == null ||
+      game.gameState.communityCards.length == 0
+    )
+      game.dealFlop();
+    else if (game.gameState.communityCards.length <= 5) {
+      game.dealTurnOrRiver();
+    }
+    let gameState = game.gameState;
+    gameState["players"] = players;
+    io.emit("gameState", game.gameState);
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected: " + socket.id);
-    //delete gameState.players[socket.id];
-    // io.emit("gameState", texasHoldem.gameState);
+    // let gameState = game.gameState;
+    // gameState["players"] = players;
+    // io.emit("gameState", game.gameState);
     io.emit("message", "A player has left the game.");
   });
 });
